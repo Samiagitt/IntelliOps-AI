@@ -18,6 +18,7 @@ DB_CONFIG = {
     "database": os.environ['database'],
     "user": os.environ['user'],
     "password": os.environ['password'],
+    "sslmode": "require",
 }
 
 CSV_DIR = "data"
@@ -41,13 +42,13 @@ print("Connected to PostgreSQL")
 
 create_tables_sql = """
 
-CREATE SCHEMA IF NOT EXISTS public;
+CREATE SCHEMA IF NOT EXISTS intelliops;
 
 -- =========================================================
 -- USERS
 -- =========================================================
 
-CREATE TABLE IF NOT EXISTS public.users (
+CREATE TABLE IF NOT EXISTS intelliops.users (
     user_id INTEGER PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
@@ -65,7 +66,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 -- VEHICLES
 -- =========================================================
 
-CREATE TABLE IF NOT EXISTS public.vehicles (
+CREATE TABLE IF NOT EXISTS intelliops.vehicles (
     vehicle_id INTEGER PRIMARY KEY,
     driver_id INTEGER NOT NULL,
     make VARCHAR(50),
@@ -77,7 +78,7 @@ CREATE TABLE IF NOT EXISTS public.vehicles (
 
     CONSTRAINT fk_vehicle_driver
         FOREIGN KEY (driver_id)
-        REFERENCES public.users(user_id)
+        REFERENCES intelliops.users(user_id)
 );
 
 
@@ -85,7 +86,7 @@ CREATE TABLE IF NOT EXISTS public.vehicles (
 -- RIDES
 -- =========================================================
 
-CREATE TABLE IF NOT EXISTS public.rides (
+CREATE TABLE IF NOT EXISTS intelliops.rides (
     ride_id INTEGER PRIMARY KEY,
 
     rider_id INTEGER NOT NULL,
@@ -110,11 +111,11 @@ CREATE TABLE IF NOT EXISTS public.rides (
 
     CONSTRAINT fk_ride_rider
         FOREIGN KEY (rider_id)
-        REFERENCES public.users(user_id),
+        REFERENCES intelliops.users(user_id),
 
     CONSTRAINT fk_ride_driver
         FOREIGN KEY (driver_id)
-        REFERENCES public.users(user_id)
+        REFERENCES intelliops.users(user_id)
 );
 
 
@@ -122,7 +123,7 @@ CREATE TABLE IF NOT EXISTS public.rides (
 -- PAYMENTS
 -- =========================================================
 
-CREATE TABLE IF NOT EXISTS public.payments (
+CREATE TABLE IF NOT EXISTS intelliops.payments (
     payment_id INTEGER PRIMARY KEY,
 
     ride_id INTEGER NOT NULL,
@@ -138,11 +139,11 @@ CREATE TABLE IF NOT EXISTS public.payments (
 
     CONSTRAINT fk_payment_ride
         FOREIGN KEY (ride_id)
-        REFERENCES public.rides(ride_id),
+        REFERENCES intelliops.rides(ride_id),
 
     CONSTRAINT fk_payment_user
         FOREIGN KEY (user_id)
-        REFERENCES public.users(user_id)
+        REFERENCES intelliops.users(user_id)
 );
 
 
@@ -150,7 +151,7 @@ CREATE TABLE IF NOT EXISTS public.payments (
 -- RATINGS
 -- =========================================================
 
-CREATE TABLE IF NOT EXISTS public.ratings (
+CREATE TABLE IF NOT EXISTS intelliops.ratings (
     rating_id INTEGER PRIMARY KEY,
 
     ride_id INTEGER NOT NULL,
@@ -163,15 +164,15 @@ CREATE TABLE IF NOT EXISTS public.ratings (
 
     CONSTRAINT fk_rating_ride
         FOREIGN KEY (ride_id)
-        REFERENCES public.rides(ride_id),
+        REFERENCES intelliops.rides(ride_id),
 
     CONSTRAINT fk_rating_rider
         FOREIGN KEY (rider_id)
-        REFERENCES public.users(user_id),
+        REFERENCES intelliops.users(user_id),
 
     CONSTRAINT fk_rating_driver
         FOREIGN KEY (driver_id)
-        REFERENCES public.users(user_id),
+        REFERENCES intelliops.users(user_id),
 
     CONSTRAINT chk_rating
         CHECK (rating BETWEEN 1 AND 5)
@@ -183,31 +184,31 @@ CREATE TABLE IF NOT EXISTS public.ratings (
 -- =========================================================
 
 CREATE INDEX IF NOT EXISTS idx_vehicles_driver_id
-ON public.vehicles(driver_id);
+ON intelliops.vehicles(driver_id);
 
 CREATE INDEX IF NOT EXISTS idx_rides_rider_id
-ON public.rides(rider_id);
+ON intelliops.rides(rider_id);
 
 CREATE INDEX IF NOT EXISTS idx_rides_driver_id
-ON public.rides(driver_id);
+ON intelliops.rides(driver_id);
 
 CREATE INDEX IF NOT EXISTS idx_rides_requested_at
-ON public.rides(requested_at);
+ON intelliops.rides(requested_at);
 
 CREATE INDEX IF NOT EXISTS idx_rides_status
-ON public.rides(status);
+ON intelliops.rides(status);
 
 CREATE INDEX IF NOT EXISTS idx_payments_ride_id
-ON public.payments(ride_id);
+ON intelliops.payments(ride_id);
 
 CREATE INDEX IF NOT EXISTS idx_payments_user_id
-ON public.payments(user_id);
+ON intelliops.payments(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_ratings_ride_id
-ON public.ratings(ride_id);
+ON intelliops.ratings(ride_id);
 
 CREATE INDEX IF NOT EXISTS idx_ratings_driver_id
-ON public.ratings(driver_id);
+ON intelliops.ratings(driver_id);
 
 """
 
@@ -220,19 +221,6 @@ print("Tables created successfully")
 # OPTIONAL: CLEAR EXISTING DATA
 # ============================================================
 
-# Uncomment this section if you want every execution
-# to completely reload the CSV data.
-
-
-cursor.execute("""
-    TRUNCATE TABLE
-        public.ratings,
-        public.payments,
-        public.rides,
-        public.vehicles,
-        public.users
-    CASCADE;
-""")
 
 
 
@@ -259,7 +247,7 @@ def load_csv(table_name, csv_file, columns):
             NULL ''
         )
     """).format(
-        sql.Identifier("public", table_name),
+        sql.Identifier("intelliops", table_name),
         sql.SQL(", ").join(
             sql.Identifier(column)
             for column in columns
@@ -409,7 +397,7 @@ for table in tables:
         sql.SQL(
             "SELECT COUNT(*) FROM {}.{}"
         ).format(
-            sql.Identifier("public"),
+            sql.Identifier("intelliops"),
             sql.Identifier(table)
         )
     )
