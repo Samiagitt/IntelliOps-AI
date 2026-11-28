@@ -63,8 +63,15 @@ def prompt_query(state: AgentSchema) -> dict:
 
     Use the intelliops schema when referencing tables.
 
-    Unless the user explicitly asks for a specific number
-    of rows, always limit the output to 10 rows.
+    For exploratory queries, return a maximum of 10 rows by default.
+
+    If the user requests all categories, all time periods,
+    or complete aggregated results, do not apply the default
+    LIMIT 10.
+
+    For time-series analysis, return records in chronological order.
+
+    Use unique and descriptive column aliases.      
 
     Generate only a read-only SQL query without any
     explanation, additional text, or Markdown code fences.
@@ -162,17 +169,12 @@ def canceled_sql(state: AgentSchema) -> dict:
 # 6. Execute SQL Query Node
 
 def execute_sql(state: AgentSchema) -> dict:
-
+    
     sql_query = state.generated_SQL_Query
 
     obj = DatabaseUtil(get_db_config())
 
     execution_result = obj.execute_sql(sql_query)
-
-    if execution_result is None:
-        return {
-            "result": "SQL execution failed."
-        }
 
     return {
         "result": execution_result
@@ -186,7 +188,7 @@ def represent_final_response(state: AgentSchema) -> dict:
     execution_result = state.result
     curated_question = state.curated_question
 
-    if execution_result == "SQL execution failed.":
+    if execution_result is None:
         return {
             "final_response": (
                 "Unable to retrieve the requested data "
@@ -325,55 +327,3 @@ sql_agent_graph.add_edge(
 sql_analyst = sql_agent_graph.compile()
 
 
-# ---------------- Test the Agent ----------------
-
-if __name__ == "__main__":
-
-    input_schema = {
-        "messages": [],
-        "user_question": (
-            "What are the different types of Payment "
-            "Methods we have in our database?"
-        ),
-        "curated_question": "",
-        "prompt_query": "",
-        "generated_SQL_Query": "",
-        "is_safe": "No",
-        "comments": "",
-        "result": "",
-        "final_response": ""
-    }
-
-    # Execute the Graph
-
-    sql_analyst_response = sql_analyst.invoke(input_schema)
-
-    print("\n********************************")
-    print("Original Question:")
-    print(sql_analyst_response["user_question"])
-
-    print("\n********************************")
-    print("Curated Question:")
-    print(sql_analyst_response["curated_question"])
-
-    print("\n********************************")
-    print("Generated SQL Query:")
-    print(sql_analyst_response["generated_SQL_Query"])
-
-    print("\n********************************")
-    print("Is SQL Safe?")
-    print(sql_analyst_response["is_safe"])
-
-    print("\n********************************")
-    print("Judge Comments:")
-    print(sql_analyst_response["comments"])
-
-    print("\n********************************")
-    print("SQL Execution Result:")
-    print(sql_analyst_response["result"])
-
-    print("\n********************************")
-    print("Final Answer:")
-    print(sql_analyst_response["final_response"])
-
-    
